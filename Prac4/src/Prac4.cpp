@@ -31,11 +31,21 @@ bool threadReady = false; //using this to finish writing the first column at the
 // Configure your interrupts here.
 // Don't forget to use debouncing.
 void play_pause_isr(void){
-    //Write your logis here
+	long interruptTime = millis();
+	if (interruptTime-lastInt>200){
+		playing=!playing;
+		}
+	lastInt = interruptTime;
 }
 
 void stop_isr(void){
-    // Write your logic here
+	long interruptTime = millis();
+	if (interruptTime-lastInt>250){
+		stopped = !stopped;
+		cout<<"STOPPED";
+		exit(0);
+	}
+	lastInt = interruptTime;
 }
 
 /*
@@ -45,9 +55,16 @@ int setup_gpio(void){
     //Set up wiring Pi
     wiringPiSetup();
     //setting up the buttons
-	//TODO
+	pinMode(PLAY_BUTTON, INPUT);
+	pinMode(STOP_BUTTON, INPUT);
+
+	//pullUpDnControl(PLAY_BUTTON, PUD_UP);
+	//pullUpDnControl(STOP_BUTTON, PUD_UP);
+
+	wiringPiISR(PLAY_BUTTON, INT_EDGE_FALLING, &play_pause_isr);
+	wiringPiISR(STOP_BUTTON, INT_EDGE_FALLING, &stop_isr);
     //setting up the SPI interface
-    //TODO
+	wiringPiSPISetup(SPI_CHAN, SPI_SPEED);
     return 0;
 }
 
@@ -61,25 +78,26 @@ int setup_gpio(void){
  */
 void *playThread(void *threadargs){
     // If the thread isn't ready, don't do anything
-    while(!threadReady)
+    while(!threadReady){
         continue;
-    
+    	}
     //You need to only be playing if the stopped flag is false
     while(!stopped){
         //Code to suspend playing if paused
-		//TODO
-        
+		while(!playing){
+			continue;
+			}
+
         //Write the buffer out to SPI
-        //TODO
-		
-        //Do some maths to check if you need to toggle buffers
+        wiringPiSPIDataRW(SPI_CHAN, buffer[bufferReading][buffer_location],2);
+       //Do some maths to check if you need to toggle buffers
         buffer_location++;
         if(buffer_location >= BUFFER_SIZE) {
             buffer_location = 0;
             bufferReading = !bufferReading; // switches column one it finishes one column
         }
     }
-    
+
     pthread_exit(NULL);
 }
 
@@ -88,7 +106,7 @@ int main(){
 	if(setup_gpio()==-1){
         return 0;
     }
-    
+
     /* Initialize thread with parameters
      * Set the play thread to have a 99 priority
      * Read https://docs.oracle.com/cd/E19455-01/806-5257/attrib-16/index.html
@@ -141,9 +159,9 @@ int main(){
             continue;
         }
         //Set config bits for first 8 bit packet and OR with upper bits
-        buffer[bufferWriting][counter][0] = ; //TODO
+        buffer[bufferWriting][counter][0] = 0b01110000 | (ch>>6);
         //Set next 8 bit packet
-        buffer[bufferWriting][counter][1] = ; //TODO
+        buffer[bufferWriting][counter][1] = (ch<<2);
 
         counter++;
         if(counter >= BUFFER_SIZE+1){
@@ -156,7 +174,7 @@ int main(){
         }
 
     }
-     
+
     // Close the file
     fclose(filePointer);
     printf("Complete reading"); 
@@ -164,7 +182,7 @@ int main(){
     //Join and exit the playthread
 	pthread_join(thread_id, NULL); 
     pthread_exit(NULL);
-	
+
     return 0;
 }
 
