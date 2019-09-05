@@ -29,8 +29,8 @@
 #include <iostream>
 
 //Define buttons
-#define PLAY_BUTTON // Write your value here
-#define STOP_BUTTON // Write your value here
+#define PLAY_BUTTON 23// WPI value - GPIO.23
+#define STOP_BUTTON 24 //WPI value - GPIO.24
 #define BUFFER_SIZE 1000
 
 //SPI Settings
